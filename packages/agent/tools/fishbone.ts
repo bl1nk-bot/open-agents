@@ -1,22 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
 
-// ========== JSON-Render Spec Types ==========
-type JsonRenderElement = {
-  type: string;
-  props: Record<string, any>;
-  children: string[];
-  visible?: any[];
-  watch?: Record<string, any>;
-};
-
-type JsonRenderSpec = {
-  root: string;
-  elements: Record<string, JsonRenderElement>;
-  state?: Record<string, any>;
-  actions?: Record<string, any>;
-};
-
 // ========== Fishbone Tool Schema ==========
 const fishboneArgs = z.object({
   // Required: sequentialthinking interface
@@ -65,7 +49,7 @@ const fishboneArgs = z.object({
 
 export const fishboneTool = () =>
   tool({
-    description: "Step-by-step root cause analysis using Fishbone Diagram. Returns json-render spec for real-time UI rendering. Call repeatedly with updated state until nextThoughtNeeded=false.",
+    description: "Step-by-step root cause analysis using Fishbone Diagram. Returns structured analysis data. Call repeatedly with updated state until nextThoughtNeeded=false.",
 
     inputSchema: fishboneArgs,
 
@@ -78,87 +62,15 @@ export const fishboneTool = () =>
         thought
       } = args;
 
-      // Helper: Generate unique ID for elements
-      const id = (prefix: string) => `${prefix}-${thoughtNumber}-${Date.now().toString(36).slice(-4)}`;
-
-      // Helper: Build json-render spec from current state
-      const buildSpec = (stepContent: string, stepType: string, extraElements: Record<string, JsonRenderElement> = {}): JsonRenderSpec => {
-        const rootId = id("root");
-        const stepId = id("step");
-        const progressId = id("progress");
-
-        return {
-          root: rootId,
-          state: {
-            currentStep: thoughtNumber,
-            totalSteps: totalThoughts,
-            confidence: args.confidence || 0,
-            fishbone: fishbone
-          },
-          elements: {
-            [rootId]: {
-              type: "FishboneCanvas",
-              props: {
-                problem: fishbone.problem || "Untitled Analysis",
-                stepType,
-                confidence: args.confidence || 0
-              },
-              children: [progressId, stepId, ...Object.keys(extraElements)]
-            },
-            [progressId]: {
-              type: "StepProgress",
-              props: {
-                current: thoughtNumber,
-                total: totalThoughts,
-                categories: fishbone.categories || [],
-                completed: fishbone.completedCategories || []
-              },
-              children: []
-            },
-            [stepId]: {
-              type: "FishboneStep",
-              props: {
-                stepNumber: thoughtNumber,
-                content: stepContent,
-                category: fishbone.currentCategory,
-                isRevision: args.isRevision,
-                branchId: args.branchId
-              },
-              children: []
-            },
-            ...extraElements
-          },
-          actions: {
-            updateState: { description: "Update fishbone state for next step" },
-            branch: { description: "Create new analysis branch" },
-            complete: { description: "Mark analysis complete" }
-          }
-        };
-      };
+      // Helper: Generate unique ID
+      const generateId = (prefix: string) => `${prefix}-${thoughtNumber}-${Date.now().toString(36).slice(-4)}`;
 
       // 🎯 Step 1: Initialize
       if (thoughtNumber === 1 && !fishbone.problem) {
         return JSON.stringify({
-          spec: buildSpec(
-            "โครงสร้าง Fishbone พร้อมใช้งาน กำหนด fishbone.problem และ fishbone.categories เพื่อเริ่มวิเคราะห์",
-            "init",
-            {
-              [id("hint")]: {
-                type: "CategorySelector",
-                props: {
-                  available: ["People", "Process", "Technology", "Environment", "Material", "Measurement"],
-                  selected: []
-                },
-                children: [],
-                watch: {
-                  "/state/fishbone/categories": {
-                    action: "updateState",
-                    params: { path: "/fishbone/categories", value: { "$event": "value" } }
-                  }
-                }
-              }
-            }
-          ),
+          step: "initialize",
+          message: "โครงสร้าง Fishbone พร้อมใช้งาน กำหนด fishbone.problem และ fishbone.categories เพื่อเริ่มวิเคราะห์",
+          availableCategories: ["People", "Process", "Technology", "Environment", "Material", "Measurement"],
           nextThoughtNeeded: true,
           guidance: "Set fishbone.problem + fishbone.categories in next call"
         });
@@ -170,32 +82,13 @@ export const fishboneTool = () =>
           .filter((c: string) => !fishbone.completedCategories?.includes(c));
 
         return JSON.stringify({
-          spec: buildSpec(
-            `เลือกหมวดหมู่เพื่อวิเคราะห์: ${available.join(", ")}`,
-            "category-select",
-            {
-              [id("cat-list")]: {
-                type: "CategoryList",
-                props: {
-                  categories: available.map((cat: string) => ({
-                    id: cat.toLowerCase(),
-                    name: cat,
-                    description: `${cat} causes related to "${fishbone.problem}"`
-                  }))
-                },
-                children: [],
-                watch: {
-                  "/state/selectedCategory": {
-                    action: "updateState",
-                    params: {
-                      path: "/fishbone/currentCategory",
-                      value: { "$event": "value" }
-                    }
-                  }
-                }
-              }
-            }
-          ),
+          step: "category_selection",
+          message: `เลือกหมวดหมู่เพื่อวิเคราะห์: ${available.join(", ")}`,
+          availableCategories: available.map((cat: string) => ({
+            id: cat.toLowerCase(),
+            name: cat,
+            description: `${cat} causes related to "${fishbone.problem}"`
+          })),
           nextThoughtNeeded: true,
           guidance: "Set fishbone.currentCategory to begin analyzing a category"
         });
@@ -211,38 +104,12 @@ export const fishboneTool = () =>
         // Prompt for main cause
         if (!currentMain) {
           return JSON.stringify({
-            spec: buildSpec(
-              `หมวดหมู่: ${fishbone.currentCategory}\nเพิ่มสาเหตุหลัก: { name: "string", subCauses: [] }`,
-              "add-main-cause",
-              {
-                [id("main-cause-form")]: {
-                  type: "CauseForm",
-                  props: {
-                    level: "main",
-                    category: fishbone.currentCategory,
-                    placeholder: "Enter main cause name..."
-                  },
-                  children: [],
-                  watch: {
-                    "/state/newMainCause": {
-                      action: "updateState",
-                      params: {
-                        path: "/fishbone/hierarchy/mainCauses",
-                        operation: "push",
-                        value: {
-                          id: { "$uuid": true },
-                          name: { "$event": "value" },
-                          category: fishbone.currentCategory,
-                          subCauses: []
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            ),
+            step: "add_main_cause",
+            message: `หมวดหมู่: ${fishbone.currentCategory}\nเพิ่มสาเหตุหลัก`,
+            category: fishbone.currentCategory,
+            placeholder: "Enter main cause name...",
             nextThoughtNeeded: true,
-            guidance: "Add main cause to fishbone.hierarchy.mainCauses array"
+            guidance: "Add main cause to fishbone.hierarchy.mainCauses array with id, name, category, and empty subCauses array"
           });
         }
 
@@ -250,40 +117,18 @@ export const fishboneTool = () =>
         const incompleteSub = currentMain.subCauses?.find((s: any) => !s.rootCause);
         if (incompleteSub) {
           return JSON.stringify({
-            spec: buildSpec(
-              `สาเหตุย่อย: ${incompleteSub.name}\nใช้ 5 Whys เพื่อหาสาเหตุรากฐาน`,
-              "five-whys",
-              {
-                [id("whys-form")]: {
-                  type: "FiveWhysForm",
-                  props: {
-                    subCauseId: incompleteSub.id,
-                    questions: [
-                      "Why did this happen?",
-                      "Why did that occur?",
-                      "Why was that the case?",
-                      "Why didn't prevention work?",
-                      "Why is this the root?"
-                    ]
-                  },
-                  children: [],
-                  watch: {
-                    "/state/fiveWhysComplete": {
-                      action: "updateState",
-                      params: {
-                        path: `/fishbone/hierarchy/mainCauses/*/subCauses/[id="${incompleteSub.id}"]`,
-                        updates: {
-                          fiveWhys: { "$event": "answers" },
-                          rootCause: { "$event": "rootAnswer" }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            ),
+            step: "five_whys_analysis",
+            message: `สาเหตุย่อย: ${incompleteSub.name}\nใช้ 5 Whys เพื่อหาสาเหตุรากฐาน`,
+            subCause: incompleteSub,
+            questions: [
+              "Why did this happen?",
+              "Why did that occur?",
+              "Why was that the case?",
+              "Why didn't prevention work?",
+              "Why is this the root?"
+            ],
             nextThoughtNeeded: true,
-            guidance: "Set fiveWhys: [string] + rootCause: string for this sub-cause"
+            guidance: "Complete 5 Whys analysis and set rootCause for this sub-cause"
           });
         }
 
@@ -292,44 +137,20 @@ export const fishboneTool = () =>
           m.category !== fishbone.currentCategory ||
           m.subCauses?.every((s: any) => s.rootCause && s.fiveWhys?.length >= 3)
         );
+
         if (allComplete) {
           const nextCat = (fishbone.categories || []).find(
             (c: string) => !fishbone.completedCategories?.includes(c) && c !== fishbone.currentCategory
           );
 
-          // Build hierarchy preview elements
-          const hierarchyElements: Record<string, JsonRenderElement> = {};
-          const causeListId = id("cause-list");
-          hierarchyElements[causeListId] = {
-            type: "CauseTree",
-            props: {
-              category: fishbone.currentCategory,
-              causes: hierarchy.mainCauses?.filter((m: any) => m.category === fishbone.currentCategory) || []
-            },
-            children: []
-          };
-
           return JSON.stringify({
-            spec: buildSpec(
-              nextCat
-                ? `✅ "${fishbone.currentCategory}" เสร็จสิ้น → ต่อไป: "${nextCat}"`
-                : `✅ ทั้งหมดเสร็จสิ้น พร้อมสรุปผล`,
-              "category-complete",
-              {
-                ...hierarchyElements,
-                [id("next-action")]: {
-                  type: "ActionButtons",
-                  props: {
-                    actions: nextCat ? [
-                      { id: "next-cat", label: `วิเคราะห์ "${nextCat}"`, action: "updateState", params: { path: "/fishbone/currentCategory", value: nextCat } }
-                    ] : [
-                      { id: "complete", label: "สร้างรายงาน", action: "complete", params: {} }
-                    ]
-                  },
-                  children: []
-                }
-              }
-            ),
+            step: "category_complete",
+            message: nextCat
+              ? `✅ "${fishbone.currentCategory}" เสร็จสิ้น → ต่อไป: "${nextCat}"`
+              : `✅ ทั้งหมดเสร็จสิ้น พร้อมสรุปผล`,
+            completedCategory: fishbone.currentCategory,
+            categoryCauses: hierarchy.mainCauses?.filter((m: any) => m.category === fishbone.currentCategory) || [],
+            nextCategory: nextCat,
             nextThoughtNeeded: !!nextCat,
             fishbone: {
               ...fishbone,
@@ -340,42 +161,27 @@ export const fishboneTool = () =>
         }
       }
 
-      // 🏁 Final: Return complete spec
+      // 🏁 Final: Return complete analysis
       if (!nextThoughtNeeded || thoughtNumber >= totalThoughts) {
         return JSON.stringify({
-          spec: {
-            root: id("final"),
-            state: { complete: true, fishbone, confidence: args.confidence || 0.95 },
-            elements: {
-              [id("final")]: {
-                type: "FishboneReport",
-                props: {
-                  problem: fishbone.problem,
-                  hierarchy: fishbone.hierarchy,
-                  completedCategories: fishbone.completedCategories,
-                  generatedAt: new Date().toISOString()
-                },
-                children: []
-              }
-            },
-            actions: {
-              export: { description: "Export report as Markdown/PDF" },
-              share: { description: "Share analysis link" }
-            }
-          },
+          step: "complete",
+          message: "Analysis complete",
+          fishbone: fishbone,
+          confidence: args.confidence || 0.95,
+          generatedAt: new Date().toISOString(),
           nextThoughtNeeded: false,
-          summary: "Analysis complete. Use spec to render final report."
+          summary: "Analysis complete with structured fishbone diagram data"
         });
       }
 
       // Default: Progress pass-through
       return JSON.stringify({
-        spec: buildSpec(thought || `ขั้นตอนที่ ${thoughtNumber}/${totalThoughts}`, "progress"),
+        step: "progress",
+        message: thought || `ขั้นตอนที่ ${thoughtNumber}/${totalThoughts}`,
+        currentStep: thoughtNumber,
+        totalSteps: totalThoughts,
         nextThoughtNeeded: thoughtNumber < totalThoughts,
-        state: {
-          category: fishbone.currentCategory,
-          progress: fishbone.completedCategories?.length || 0
-        }
+        fishbone: fishbone
       });
     }
   });

@@ -36,5 +36,11 @@
   "overrides": {
     "zod": "^4.3.6"
   },
-  "packageManager": "bun@1.2.14"
+  "packageManager": "bun@1.2.14",
+  "dependencies": {
+    "@json-render/core": "^0.19.0",
+    "@json-render/react": "^0.19.0",
+    "csv-parse": "^6.2.1",
+    "xlsx": "^0.18.5"
+  }
 }

@@ -22,6 +22,7 @@ import { TodoRenderer } from "./renderers/todo-renderer";
 import { AskUserQuestionRenderer } from "./renderers/ask-user-question-renderer";
 import { FetchRenderer } from "./renderers/fetch-renderer";
 import { SkillRenderer } from "./renderers/skill-renderer";
+import { FishboneRenderer } from "./renderers/fishbone-renderer";
 
 export type ToolCallProps = {
   part: WebAgentUIToolPart;
@@ -76,6 +77,8 @@ export function ToolCall({
       return <FetchRenderer part={part} state={state} {...approvalProps} />;
     case "tool-skill":
       return <SkillRenderer part={part} state={state} {...approvalProps} />;
+    case "tool-fishbone":
+      return <FishboneRenderer part={part} state={state} {...approvalProps} />;
     default:
       return (
         <DefaultRenderer

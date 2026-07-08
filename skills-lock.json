@@ -11,6 +11,13 @@
       "sourceType": "github",
       "computedHash": "3483217a04e5abd951e9f90f26beb062cdcccb5785a3b2a97ec9fe797536a135"
     },
+    "claude-handoff": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/in-progress/claude-handoff/SKILL.md",
+      "computedHash": "a54f0c37add7af7dc578627cba10170a930132f8a6be706b97857d244b45e93c",
+      "localModifications": "Removed disable-model-invocation (this repo's skill tool hard-blocks invocation when set, unlike Claude Code's slash-command model) and reworked the launch command to write the handoff summary to a file instead of inlining it, to avoid shell metacharacter injection from conversation content."
+    },
     "emil-design-eng": {
       "source": "emilkowalski/skill",
       "sourceType": "github",

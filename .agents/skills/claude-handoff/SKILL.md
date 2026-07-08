@@ -2,10 +2,9 @@
 name: claude-handoff
 description: Hand the current conversation off to a fresh background agent that picks up the work immediately.
 argument-hint: "What will the next session be used for?"
-disable-model-invocation: true
 ---
 
-Write a handoff summary of the current conversation so a fresh agent can continue the work. Instead of saving it, launch a background agent seeded with the summary as its prompt: `claude --bg --name "<descriptive name>" "<handoff summary>"`. It starts in the current working directory and returns immediately; the user manages it with `claude agents`.
+Write a handoff summary of the current conversation so a fresh agent can continue the work. Write the summary to a temporary file first (never inline it in the shell command — it can contain quotes, backticks, `$()`, and other shell metacharacters from the conversation), then launch a background agent seeded from that file: `claude --bg --name "<descriptive name>" "$(cat <path-to-summary-file>)"`, or pass the file path directly if the CLI supports reading a prompt from a file. It starts in the current working directory and returns immediately; the user manages it with `claude agents`.
 
 Always pass `-n`/`--name` with a descriptive name (e.g. `--name "Fix login bug"`) — it sets the display name shown in the job list, session picker, and terminal title.
 

@@ -9,6 +9,7 @@ This file provides guidance for AI coding agents working in this repository.
 - [Architecture & Workspace Structure](docs/agents/architecture.md)
 - [Code Style & Patterns](docs/agents/code-style.md)
 - [Lessons Learned](docs/agents/lessons-learned.md)
+- [Unified Agent Framework — Consolidation Plan](docs/agents/consolidation-plan.md)
 
 ## Authentication
 

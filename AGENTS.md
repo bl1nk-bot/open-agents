@@ -10,6 +10,7 @@ This file provides guidance for AI coding agents working in this repository.
 - [Code Style & Patterns](docs/agents/code-style.md)
 - [Lessons Learned](docs/agents/lessons-learned.md)
 - [Unified Agent Framework — Consolidation Plan](docs/agents/consolidation-plan.md)
+- [Consolidation Backlog (task breakdown, milestones, labels)](docs/agents/consolidation-backlog.md)
 
 ## Authentication
 

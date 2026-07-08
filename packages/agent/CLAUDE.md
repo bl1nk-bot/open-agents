@@ -18,7 +18,7 @@ The agent runtime. Builds the `openAgent` `ToolLoopAgent` (from the `ai` SDK) th
 ## Commands
 
 ```bash
-turbo typecheck --filter=agent
+turbo typecheck --filter=@open-agents/agent
 ```
 
 ## Where this is going

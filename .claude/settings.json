@@ -10,5 +10,16 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "deny": [
+      "Read(./**/.next/**)",
+      "Read(./**/dist/**)",
+      "Read(./**/build/**)",
+      "Read(./**/coverage/**)"
+    ]
+  },
+  "worktree": {
+    "symlinkDirectories": ["node_modules"]
   }
 }

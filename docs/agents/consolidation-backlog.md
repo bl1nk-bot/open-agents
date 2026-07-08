@@ -55,7 +55,7 @@ Run `vercel connect create github|craft.do|mcp.<server>|daytona|modal.com`. Add 
 
 ### 1A — Scaffold apps/agent-runtime
 **Milestone:** Phase 1 · **Labels:** `phase:1` `priority:p0` `area:eve` `type:build`
-`npx eve@latest init`, wired into `pnpm-workspace.yaml`/`turbo.json`, with its own CI job.
+`pnpm dlx eve@latest init` (pnpm's npx equivalent, per this repo's pnpm-only convention), wired into `pnpm-workspace.yaml`/`turbo.json`, with its own CI job.
 **Verification:**
 - [ ] `turbo build --filter=agent-runtime` succeeds
 - [ ] New CI job runs and is green on a trivial commit

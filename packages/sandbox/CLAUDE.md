@@ -16,7 +16,7 @@ The sandbox abstraction. Defines what an execution environment can do (`interfac
 ## Commands
 
 ```bash
-turbo typecheck --filter=sandbox
+turbo typecheck --filter=@open-agents/sandbox
 bun test packages/sandbox
 ```
 
